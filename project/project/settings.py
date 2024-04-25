@@ -75,6 +75,7 @@ TEMPLATES = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://192.168.1.25:5173",
+    "http://52.151.192.152"
 ]
 
 WSGI_APPLICATION = 'project.wsgi.application'
@@ -125,7 +126,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# STATIC_URL = 'static/'
+STATIC_ROOT = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

@@ -5,7 +5,4 @@ from django.db import models
 
 
 class SendEmail(models.Model):
-    name = models.CharField(max_length=255)
-    email = models.EmailField()
-    price = models.BigIntegerField()
-    mobile_number = models.BigIntegerField()
+    email = models.TextField()

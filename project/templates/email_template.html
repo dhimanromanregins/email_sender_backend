@@ -44,7 +44,7 @@
         color: #2222a5;
       }
 
-      .user-details .sender-price,
+      .user-details .sender-amount,
       .user-details .due {
         margin: 20px 0px;
         font-size: 22px;
@@ -126,16 +126,16 @@
   <body>
     <div class="payment-page">
       <div class="payment-info">
-        <p class="greeting">Hello, <span>test@gmail.com</span></p>
+        <p class="greeting">Hello, <span>{{email}}</span></p>
         <div class="logo"></div>
         <div class="user-details">
           <div class="heading">Here's your invoice</div>
-          <div class="sender-price">
-            Felipe Morton sent you an invoice for $299 USD
+          <div class="sender-amount">
+            {{sender_name}} sent you an invoice for ${{amount}} USD
           </div>
           <div class="due">Due on receipt.</div>
           <div class="user-data">
-            <div class="name">Jhon Doe</div>
+            <div class="name">{{name}}</div>
             <div class="user-contact">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -164,7 +164,7 @@
                   d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414zM0 4.697v7.104l5.803-3.558zM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586zm3.436-.586L16 11.801V4.697z"
                 />
               </svg>
-              <div class="email">freelance.iver.1.11@gmail.com</div>
+              <div class="email">{{email}}</div>
             </div>
             <div class="user-contact">
               <svg
@@ -188,7 +188,7 @@
             <div class="heading">Invoice details</div>
             <div class="amount">
               <div class="detail-heading">Amount requested</div>
-              <div>$299 USD</div>
+              <div>${{amount}} USD</div>
             </div>
             <div class="seller-notes">
               <div class="detail-heading">Note from seller</div>
@@ -199,7 +199,7 @@
             </div>
             <div class="invoice-number">
               <div class="detail-heading">Invoice number</div>
-              <div>0002</div>
+              <div>{{invoice}}</div>
             </div>
           </div>
         </div>

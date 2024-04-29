@@ -1,24 +1,34 @@
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.contrib.auth.models import User
 
 class SendEmail(models.Model):
     email = models.EmailField()
 
     def __str__(self):
         return self.email
+
+
+class Emails(models.Model):
+    emails = models.EmailField()
+    def __str__(self):
+        return self.emails
+
+class GroupEmails(models.Model):
+    group_name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.group_name
+
 class EmailList(models.Model):
+    group_name = models.ForeignKey(GroupEmails, on_delete=models.CASCADE)
     email = models.EmailField()
 
     def __str__(self):
         return self.email
 
-class GroupEmails(models.Model):
-    email = models.ForeignKey(EmailList, on_delete=models.CASCADE)
-    group_name = models.CharField(max_length=255)
 
-    def __str__(self):
-        return self.group_name
 
 
 class TemplateEmail(models.Model):
@@ -72,4 +82,22 @@ def update_or_create_default_email_details(name, email, price):
         instance.price = price
         instance.save()
     return instance
+
+
+
+
+class Products(models.Model):
+    name = models.CharField(max_length=255)
+    price = models.IntegerField()
+    image = models.ImageField(upload_to='images/')
+
+    def __str__(self):
+        return self.name
+
+
+class Profile(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=255, null=True, blank=True)
+    profile_image = models.ImageField(null=True, blank=True)
+    phone_number = models.BigIntegerField(null=True, blank=True)
 

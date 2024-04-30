@@ -22,12 +22,7 @@
       .payment-info .logo {
         height: 3.25rem;
         width: 3.25rem;
-        background-image: url(https://w7.pngwing.com/pngs/720/939/png-transparent-paypal-computer-icons-logo-paypal-blue-angle-service-thumbnail.png) !important;
-        background-position: center;
-        background-size: cover;
-        background-repeat: no-repeat;
-        position: relative;
-        margin-left: 25px;
+
       }
 
       .greeting span {
@@ -127,7 +122,9 @@
     <div class="payment-page">
       <div class="payment-info">
         <p class="greeting">Hello, <span>{{email}}</span></p>
-        <div class="logo"></div>
+        <div class="logo">
+          <img src="http://127.0.0.1:8000/media/images/Python-logo-notext.svg_DCpBBrj.png" alt="logo" />
+        </div>
         <div class="user-details">
           <div class="heading">Here's your invoice</div>
           <div class="sender-amount">

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import SendEmailList, ProductList,ProductDetail,ProfileAPIView,EmailDetailView,GroupEmailsListAPIView,EmailsDetail,EmailListView,EmailsList,EmailCountByGroup,SendBulkEmail,SendEmailGroup,UserLoginAPIView, UserRegisterAPIView
+from .views import SendEmailList, ProductList,ProductDetail,ProfileDetailAPIView,GroupEmailsList,GroupEmailsDetail,ProfileAPIView,EmailDetailView,GroupEmailsListAPIView,EmailsDetail,EmailListView,EmailsList,EmailCountByGroup,SendBulkEmail,SendEmailGroup,UserLoginAPIView, UserRegisterAPIView
 
 urlpatterns = [
     path('login/', UserLoginAPIView.as_view(), name='user_login'),
@@ -16,6 +16,8 @@ urlpatterns = [
     path('emailgroup/', EmailListView.as_view(), name='email-list'),
     path('emailgroup/<int:pk>/', EmailDetailView.as_view(), name='email-detail'),
     path('group-emails/', GroupEmailsListAPIView.as_view(), name='group-emails-list'),
-    path('profiles/', ProfileAPIView.as_view()),  # For POST request to create a profile and GET request to get all profiles
-    path('profiles/<int:pk>/', ProfileAPIView.as_view()),
+    path('profiles/', ProfileAPIView.as_view(), name='profile-list'),
+    path('profiles/<int:user_id>/', ProfileDetailAPIView.as_view(), name='profile-detail'),
+    path('addgroups/', GroupEmailsList.as_view(), name='group-list'),
+    path('addgroups/<int:pk>/', GroupEmailsDetail.as_view(), name='group-detail'),
 ]

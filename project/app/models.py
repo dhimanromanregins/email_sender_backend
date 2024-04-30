@@ -63,6 +63,7 @@ class DefaultEmailDetails(models.Model):
     price = models.IntegerField()
     type = models.CharField(max_length=255)
     sender_name = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='images/')
 
     def __str__(self):
         return self.name

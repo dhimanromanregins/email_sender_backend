@@ -1,9 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import authenticate, login
+from django.db.models import Count
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from .models import SendEmail,EmailList,GroupEmails,Profile, GroupEmails,Products,DefaultEmailDetails,Emails,TemplateEmail
-from .serializers import SendEmailSerializer, UserSerializer,ProfileSerializer,GroupEmailsSerializer, EmailListSerializer,ProductSerializer,EmailSerializer
+from .serializers import SendEmailSerializer, UserSerializer,GroupEmailsSerializer,ProfileSerializer,GroupEmailsSerializer, EmailListSerializer,ProductSerializer,EmailSerializer
 from django.core.mail import send_mail
 from rest_framework.authtoken.models import Token
 from django.template.loader import render_to_string
@@ -32,10 +34,20 @@ class UserLoginAPIView(APIView):
         if user:
             login(request, user)
             token, created = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key})
+
+            # Serialize user data
+            user_serializer = UserSerializer(user)
+            user_data = user_serializer.data
+
+            # Include user data along with the token in the response
+            response_data = {
+                'token': token.key,
+                'user': user_data
+            }
+
+            return Response(response_data)
         else:
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-
 class UserRegisterAPIView(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
@@ -55,14 +67,21 @@ def generate_random_5_digit_number():
 def send_dynamic_email(email, name=None , price=None, sender_name=None):
     template_name = 'email_template.html'
     random_number = generate_random_5_digit_number()
-    print(email, '==============')
+    default_email_details = DefaultEmailDetails.objects.get(type='default')
+    profile_img_url = default_email_details.image.url if default_email_details.image else None
+    if profile_img_url:
+        full_image_path = "http://127.0.0.1:8000" + profile_img_url
+        print(full_image_path, '===========')
+    else:
+        print("No default image found.")
     if name is not None and price is not None and sender_name is not None:
         context = {
             'name': name,
             'amount': price,
             'email': email,
             'sender_name': sender_name,
-            'invoice':random_number
+            'invoice':random_number,
+            'img':full_image_path
         }
         rendered_string = render_to_string(template_name, context)
         default_data_email = TemplateEmail.objects.get(type='default')
@@ -82,7 +101,8 @@ def send_dynamic_email(email, name=None , price=None, sender_name=None):
             'amount': default_data.price,
             'email':email,
             'sender_name':default_data.sender_name,
-            'invoice': random_number
+            'invoice': random_number,
+            'img': profile_img_url
         }
         rendered_string = render_to_string(template_name, context)
         default_data_email = TemplateEmail.objects.get(type='default')
@@ -126,25 +146,28 @@ class SendBulkEmail(APIView):
 
 def send_emails_in_group(group_name, name=None, price=None, sender_name=None):
     try:
-        group_emails = GroupEmails.objects.filter(group_name=group_name)
+        group_id = GroupEmails.objects.get(group_name=group_name).id
+        group_emails = EmailList.objects.filter(group_name=group_id)
+        email_list = []
         for group_email in group_emails:
-            email = [group_email.email.email]
-            if name is not None and price is not None and sender_name is not None:
-                send_dynamic_email(email, name=name, price=price, sender_name=sender_name)
-            else:
-                send_dynamic_email(email)
+            email_list.append(group_email.email)
+        if name is not None and price is not None and sender_name is not None:
+            send_dynamic_email(email_list, name=name, price=price, sender_name=sender_name)
+        else:
+            send_dynamic_email(email_list)
+
         return True, "Emails sent successfully to the group '{}'".format(group_name)
     except GroupEmails.DoesNotExist:
         return False, "Group '{}' does not exist".format(group_name)
 
 class SendEmailGroup(APIView):
-
     def get(self, request, format=None):
         send_emails = GroupEmails.objects.all()
         serializer = SendEmailSerializer(send_emails, many=True)
         return Response(serializer.data)
 
     def post(self, request):
+        print(request.data, '==========')
         group_name = request.data.get('group_name')
         name = request.data.get('name')
         price = request.data.get('price')
@@ -345,42 +368,113 @@ class GroupEmailsListAPIView(generics.ListAPIView):
     serializer_class = GroupEmailsSerializer
 
 
-class ProfileAPIView(APIView):
-    def get(self, request, pk=None):
-        # If pk is provided, retrieve a specific profile, else retrieve all profiles
-        if pk:
-            profile = Profile.objects.get(pk=pk)
-            serializer = ProfileSerializer(profile)
-            return Response(serializer.data)
-        else:
-            profiles = Profile.objects.all()
-            serializer = ProfileSerializer(profiles, many=True)
-            return Response(serializer.data)
+
+
+
+class GroupEmailsList(APIView):
+    def get(self, request):
+        groups = GroupEmails.objects.all()
+        data = []
+        for grp in groups:
+            count = EmailList.objects.filter(group_name=grp.id).count()
+            serializer = GroupEmailsSerializer(grp)
+            group_data = serializer.data
+            group_data['email_count'] = count
+            data.append(group_data)
+
+        return Response(data)
 
     def post(self, request):
-        serializer = ProfileSerializer(data=request.data)
+        serializer = GroupEmailsSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class GroupEmailsDetail(APIView):
+    def get_object(self, pk):
+        try:
+            return GroupEmails.objects.get(pk=pk)
+        except GroupEmails.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk):
+        group = self.get_object(pk)
+        serializer = GroupEmailsSerializer(group)
+        return Response(serializer.data)
+
     def put(self, request, pk):
-        profile = Profile.objects.get(pk=pk)
-        serializer = ProfileSerializer(profile, data=request.data)
+        group = self.get_object(pk)
+        serializer = GroupEmailsSerializer(group, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, pk):
-        profile = Profile.objects.get(pk=pk)
-        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        group = self.get_object(pk)
+        serializer = GroupEmailsSerializer(group, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        profile = Profile.objects.get(pk=pk)
+        group = self.get_object(pk)
+        group.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ProfileAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        # Get profiles associated with the current user
+        profiles = Profile.objects.filter(user=request.user.id)
+        serializer = ProfileSerializer(profiles, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        # Assign current user to profile being created
+        request.data['user'] = request.user.id
+        serializer = ProfileSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ProfileDetailAPIView(APIView):
+    def get_object(self, user_id):
+        return get_object_or_404(Profile, user_id=user_id)
+
+    def get(self, request, *args, **kwargs):
+        user_id = request.query_params.get('user_id')
+        print(user_id, '==========')
+        if not user_id:
+            return Response({'error': 'User ID parameter is missing.'}, status=status.HTTP_400_BAD_REQUEST)
+        profile = self.get_object(user_id)
+        print(profile.user.id, '+==')
+
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data)
+
+    def put(self, request, user_id, *args, **kwargs):
+        profile = self.get_object(user_id)
+        serializer = ProfileSerializer(profile, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, user_id, *args, **kwargs):
+        profile = self.get_object(user_id)
+
+        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, user_id, *args, **kwargs):
+        profile = self.get_object(user_id)
+
         profile.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -1,22 +1,20 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import authenticate, login
-from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from .models import SendEmail,EmailList,GroupEmails,Profile, GroupEmails,Products,DefaultEmailDetails,Emails,TemplateEmail
 from .serializers import SendEmailSerializer, UserSerializer,GroupEmailsSerializer,ProfileSerializer,GroupEmailsSerializer, EmailListSerializer,ProductSerializer,EmailSerializer
-from django.core.mail import send_mail
 from rest_framework.authtoken.models import Token
 from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 import os
 import random
+from django.conf import settings
 from rest_framework import generics
 from django.core.mail import EmailMultiAlternatives
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.http import Http404
+from email.mime.image import MIMEImage
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
 
@@ -64,7 +62,7 @@ def generate_random_5_digit_number():
     return random.randint(10000, 99999)
 
 
-def send_dynamic_email(email, name=None , price=None, sender_name=None):
+def send_dynamic_email(email, name=None, price=None, sender_name=None):
     template_name = 'email_template.html'
     random_number = generate_random_5_digit_number()
     default_email_details = DefaultEmailDetails.objects.get(type='default')
@@ -74,14 +72,24 @@ def send_dynamic_email(email, name=None , price=None, sender_name=None):
         print(full_image_path, '===========')
     else:
         print("No default image found.")
+
+    image_attachment = None
+    if profile_img_url:
+        image_file_path = os.path.join(settings.BASE_DIR, profile_img_url.strip('/'))
+        with open(image_file_path, 'rb') as logo_file:
+            logo_data = logo_file.read()
+            logo_mime = MIMEImage(logo_data, _subtype='jpeg')
+            logo_mime.add_header('Content-ID', 'logo')
+            image_attachment = logo_mime
+
     if name is not None and price is not None and sender_name is not None:
         context = {
             'name': name,
             'amount': price,
             'email': email,
             'sender_name': sender_name,
-            'invoice':random_number,
-            'img':full_image_path
+            'invoice': random_number,
+            'img': full_image_path
         }
         rendered_string = render_to_string(template_name, context)
         default_data_email = TemplateEmail.objects.get(type='default')
@@ -92,6 +100,8 @@ def send_dynamic_email(email, name=None , price=None, sender_name=None):
             to=email.split(','),
         )
         email.attach_alternative(rendered_string, "text/html")
+        if image_attachment:
+            email.attach(image_attachment)
         status = email.send()
 
     else:
@@ -99,8 +109,8 @@ def send_dynamic_email(email, name=None , price=None, sender_name=None):
         context = {
             'name': default_data.name,
             'amount': default_data.price,
-            'email':email,
-            'sender_name':default_data.sender_name,
+            'email': email,
+            'sender_name': default_data.sender_name,
             'invoice': random_number,
             'img': profile_img_url
         }
@@ -113,6 +123,8 @@ def send_dynamic_email(email, name=None , price=None, sender_name=None):
             to=email,
         )
         email.attach_alternative(rendered_string, "text/html")
+        if image_attachment:
+            email.attach(image_attachment)
         status = email.send()
 
 
